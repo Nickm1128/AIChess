@@ -23,7 +23,7 @@ def mutate_agent(original_agent, mutation_rate, mutation_strength):
             
             # Add a few random synapses involving the newly added neuron
             # Connect the new neuron randomly within the existing/growing network
-            num_new_synapses_for_neuron = random.randint(1, 5) # Add 1 to 5 synapses per new neuron
+            num_new_synapses_for_neuron = random.randint(7, 12) # Add 1 to 5 synapses per new neuron
             for _ in range(num_new_synapses_for_neuron):
                 if len(mutated_agent.neurons) >= 2: # Ensure enough neurons for sampling
                     pre, post = random.sample(mutated_agent.neurons, 2)
