@@ -113,27 +113,48 @@ class RandomAgent(Agent):
 
 
 def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
-                          mutation_rate=0.1, mutation_strength=0.2):
-    """Evolve two agents by alternately mutating them until a mutation wins."""
+                          mutation_rate=0.1, mutation_strength=0.2,
+                          max_skill_gap=5):
+    """Evolve two agents while keeping their skill levels relatively close."""
     for r in range(rounds):
+        skill_a = evaluate_agent(agent_a)
+        skill_b = evaluate_agent(agent_b)
+        skill_diff = skill_a - skill_b
+
+        allow_a = True
+        allow_b = True
+        attempts_a = attempts
+        attempts_b = attempts
+
+        if skill_diff > max_skill_gap:
+            # Agent A is too far ahead; pause its improvement and give B more chances
+            allow_a = False
+            attempts_b *= 2
+        elif -skill_diff > max_skill_gap:
+            # Agent B is too far ahead
+            allow_b = False
+            attempts_a *= 2
+
         improved_a = False
-        for _ in range(attempts):
-            mutant = mutate_agent(agent_a, mutation_rate, mutation_strength)
-            score, _, _ = evaluate_match(mutant, agent_b)
-            if score > 0:
-                agent_a = mutant
-                improved_a = True
-                break
+        if allow_a:
+            for _ in range(attempts_a):
+                mutant = mutate_agent(agent_a, mutation_rate, mutation_strength)
+                score, _, _ = evaluate_match(mutant, agent_b)
+                if score > 0:
+                    agent_a = mutant
+                    improved_a = True
+                    break
 
         improved_b = False
-        for _ in range(attempts):
-            mutant = mutate_agent(agent_b, mutation_rate, mutation_strength)
-            score, _, _ = evaluate_match(mutant, agent_a)
-            if score > 0:
-                agent_b = mutant
-                improved_b = True
-                break
-        # Assess skills and wins after this round
+        if allow_b:
+            for _ in range(attempts_b):
+                mutant = mutate_agent(agent_b, mutation_rate, mutation_strength)
+                score, _, _ = evaluate_match(mutant, agent_a)
+                if score > 0:
+                    agent_b = mutant
+                    improved_b = True
+                    break
+
         match_score, wins_a, wins_b = evaluate_match(agent_a, agent_b)
         skill_a = evaluate_agent(agent_a)
         skill_b = evaluate_agent(agent_b)
