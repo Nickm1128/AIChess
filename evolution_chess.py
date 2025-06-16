@@ -75,12 +75,26 @@ def evaluate_agent(agent, games=2):
 
 
 def evaluate_match(agent_a, agent_b, games=2):
-    """Play agents against each other and return the score for agent_a."""
+    """Play agents against each other and return score and win counts."""
     score = 0
+    wins_a = 0
+    wins_b = 0
     for _ in range(games):
-        score += play_game(agent_a, agent_b)
-        score -= play_game(agent_b, agent_a)
-    return score
+        result = play_game(agent_a, agent_b)
+        if result == 1:
+            wins_a += 1
+        elif result == -1:
+            wins_b += 1
+        score += result
+
+        result = play_game(agent_b, agent_a)
+        if result == 1:
+            wins_b += 1
+        elif result == -1:
+            wins_a += 1
+        score -= result  # subtract because perspective flips
+
+    return score, wins_a, wins_b
 
 
 class RandomAgent(Agent):
@@ -104,7 +118,8 @@ def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
         improved_a = False
         for _ in range(attempts):
             mutant = mutate_agent(agent_a, mutation_rate, mutation_strength)
-            if evaluate_match(mutant, agent_b) > 0:
+            score, _, _ = evaluate_match(mutant, agent_b)
+            if score > 0:
                 agent_a = mutant
                 improved_a = True
                 break
@@ -112,12 +127,23 @@ def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
         improved_b = False
         for _ in range(attempts):
             mutant = mutate_agent(agent_b, mutation_rate, mutation_strength)
-            if evaluate_match(mutant, agent_a) > 0:
+            score, _, _ = evaluate_match(mutant, agent_a)
+            if score > 0:
                 agent_b = mutant
                 improved_b = True
                 break
+        # Assess skills and wins after this round
+        match_score, wins_a, wins_b = evaluate_match(agent_a, agent_b)
+        skill_a = evaluate_agent(agent_a)
+        skill_b = evaluate_agent(agent_b)
 
         print(f"Round {r}: A improved={improved_a}, B improved={improved_b}")
+        print(
+            f"    AgentA - skill {skill_a}, neurons {len(agent_a.neurons)}, wins vs B {wins_a}"
+        )
+        print(
+            f"    AgentB - skill {skill_b}, neurons {len(agent_b.neurons)}, wins vs A {wins_b}"
+        )
     return agent_a, agent_b
 
 
@@ -129,4 +155,6 @@ if __name__ == '__main__':
     # Run competitive evolution between the two agents
     agent_a, agent_b = competitive_evolution(agent_a, agent_b, rounds=10, attempts=5)
 
-    print('Final duel score:', evaluate_match(agent_a, agent_b))
+    final_score, wins_a, wins_b = evaluate_match(agent_a, agent_b)
+    print('Final duel score:', final_score)
+    print(f'AgentA wins: {wins_a}, AgentB wins: {wins_b}')
