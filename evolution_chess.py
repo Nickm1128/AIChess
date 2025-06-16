@@ -154,7 +154,7 @@ if __name__ == '__main__':
     agent_b = Agent('AgentB', neuron_count)
 
     # Run competitive evolution between the two agents
-    agent_a, agent_b = competitive_evolution(agent_a, agent_b, rounds=10, attempts=5)
+    agent_a, agent_b = competitive_evolution(agent_a, agent_b, rounds=1_000_000, attempts=100)
 
     # Save the evolved agents
     with open('agent_a.pkl', 'wb') as f_a:
