@@ -170,7 +170,7 @@ def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
 
 
 if __name__ == '__main__':
-    neuron_count = 70
+    neuron_count = 10
     agent_a = Agent('AgentA', neuron_count)
     agent_b = Agent('AgentB', neuron_count)
 
