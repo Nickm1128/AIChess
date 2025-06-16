@@ -1,4 +1,5 @@
 import chess
+import chess.engine
 import random
 import numpy as np
 import pickle
@@ -98,6 +99,45 @@ def evaluate_match(agent_a, agent_b, games=2):
     return score, wins_a, wins_b
 
 
+def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, depth=1):
+    """Play a single game against Stockfish and return the result from the agent's perspective."""
+    board = chess.Board()
+    move_count = 0
+    while not board.is_game_over() and move_count < max_moves:
+        if board.turn == (chess.WHITE if play_as_white else chess.BLACK):
+            agent.reset()
+            inputs = encode_board(board)
+            agent.receive_inputs(inputs)
+            agent.step(think=2)
+            move = choose_move(agent, board)
+            if move is None or move not in board.legal_moves:
+                move = random.choice(list(board.legal_moves))
+        else:
+            result = engine.play(board, chess.engine.Limit(depth=depth))
+            move = result.move
+        board.push(move)
+        move_count += 1
+
+    result = board.result(claim_draw=True)
+    if result == '1-0':
+        return 1 if play_as_white else -1
+    elif result == '0-1':
+        return -1 if play_as_white else 1
+    else:
+        return 0
+
+
+def pretrain_agent(agent, engine_path='/usr/games/stockfish', games=5, depth=1):
+    """Warm start an agent by playing a few games against Stockfish."""
+    engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    for _ in range(games):
+        result = play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
+        agent.learn(result)
+        result = play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
+        agent.learn(result)
+    engine.quit()
+
+
 class RandomAgent(Agent):
     def __init__(self, neuron_count):
         super().__init__('Random', neuron_count)
@@ -114,8 +154,15 @@ class RandomAgent(Agent):
 
 def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
                           mutation_rate=0.1, mutation_strength=0.2,
-                          max_skill_gap=5):
+                          max_skill_gap=5, pretrain_games=0,
+                          stockfish_path='/usr/games/stockfish'):
     """Evolve two agents while keeping their skill levels relatively close."""
+
+    if pretrain_games > 0:
+        print(f"Pretraining agents for {pretrain_games} games against Stockfish...")
+        pretrain_agent(agent_a, stockfish_path, games=pretrain_games)
+        pretrain_agent(agent_b, stockfish_path, games=pretrain_games)
+
     for r in range(rounds):
         skill_a = evaluate_agent(agent_a)
         skill_b = evaluate_agent(agent_b)
@@ -174,8 +221,14 @@ if __name__ == '__main__':
     agent_a = Agent('AgentA', neuron_count)
     agent_b = Agent('AgentB', neuron_count)
 
-    # Run competitive evolution between the two agents
-    agent_a, agent_b = competitive_evolution(agent_a, agent_b, rounds=1_000_000, attempts=100)
+    # Run competitive evolution between the two agents with a short Stockfish pretrain
+    agent_a, agent_b = competitive_evolution(
+        agent_a,
+        agent_b,
+        rounds=1_000_000,
+        attempts=100,
+        pretrain_games=5,
+    )
 
     # Save the evolved agents
     with open('agent_a.pkl', 'wb') as f_a:
