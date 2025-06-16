@@ -1,6 +1,7 @@
 import chess
 import random
 import numpy as np
+import pickle
 
 from Agent import Agent
 from mutations import mutate_agent
@@ -154,6 +155,12 @@ if __name__ == '__main__':
 
     # Run competitive evolution between the two agents
     agent_a, agent_b = competitive_evolution(agent_a, agent_b, rounds=10, attempts=5)
+
+    # Save the evolved agents
+    with open('agent_a.pkl', 'wb') as f_a:
+        pickle.dump(agent_a, f_a)
+    with open('agent_b.pkl', 'wb') as f_b:
+        pickle.dump(agent_b, f_b)
 
     final_score, wins_a, wins_b = evaluate_match(agent_a, agent_b)
     print('Final duel score:', final_score)
