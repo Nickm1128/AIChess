@@ -65,11 +65,21 @@ def play_game(agent_white, agent_black, max_moves=40):
 
 
 def evaluate_agent(agent, games=2):
+    """Evaluate an agent against a random opponent."""
     score = 0
     for _ in range(games):
         random_opponent = RandomAgent(len(agent.neurons))
         score += play_game(agent, random_opponent)
         score -= play_game(random_opponent, agent)
+    return score
+
+
+def evaluate_match(agent_a, agent_b, games=2):
+    """Play agents against each other and return the score for agent_a."""
+    score = 0
+    for _ in range(games):
+        score += play_game(agent_a, agent_b)
+        score -= play_game(agent_b, agent_a)
     return score
 
 
@@ -87,22 +97,36 @@ class RandomAgent(Agent):
         return random.choice(list(board.legal_moves))
 
 
+def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
+                          mutation_rate=0.1, mutation_strength=0.2):
+    """Evolve two agents by alternately mutating them until a mutation wins."""
+    for r in range(rounds):
+        improved_a = False
+        for _ in range(attempts):
+            mutant = mutate_agent(agent_a, mutation_rate, mutation_strength)
+            if evaluate_match(mutant, agent_b) > 0:
+                agent_a = mutant
+                improved_a = True
+                break
+
+        improved_b = False
+        for _ in range(attempts):
+            mutant = mutate_agent(agent_b, mutation_rate, mutation_strength)
+            if evaluate_match(mutant, agent_a) > 0:
+                agent_b = mutant
+                improved_b = True
+                break
+
+        print(f"Round {r}: A improved={improved_a}, B improved={improved_b}")
+    return agent_a, agent_b
+
+
 if __name__ == '__main__':
-    population_size = 4
     neuron_count = 70
-    generations = 3
-    population = [Agent(f'Agent{i}', neuron_count) for i in range(population_size)]
-    for gen in range(generations):
-        scores = []
-        for agent in population:
-            fitness = evaluate_agent(agent)
-            scores.append((fitness, agent))
-        scores.sort(key=lambda x: x[0], reverse=True)
-        best_score, best_agent = scores[0]
-        print(f'Generation {gen}: best score {best_score}')
-        new_population = [best_agent]
-        while len(new_population) < population_size:
-            parent = random.choice(population)
-            child = mutate_agent(parent, 0.1, 0.2)
-            new_population.append(child)
-        population = new_population
+    agent_a = Agent('AgentA', neuron_count)
+    agent_b = Agent('AgentB', neuron_count)
+
+    # Run competitive evolution between the two agents
+    agent_a, agent_b = competitive_evolution(agent_a, agent_b, rounds=10, attempts=5)
+
+    print('Final duel score:', evaluate_match(agent_a, agent_b))
