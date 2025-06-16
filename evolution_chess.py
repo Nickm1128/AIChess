@@ -99,12 +99,23 @@ def evaluate_match(agent_a, agent_b, games=2):
     return score, wins_a, wins_b
 
 
+def evaluate_board(board, engine, depth=1):
+    """Return Stockfish's evaluation in centipawns from White's perspective."""
+    info = engine.analyse(board, chess.engine.Limit(depth=depth))
+    return info["score"].white().score(mate_score=10000)
+
+
 def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, depth=1):
     """Play a single game against Stockfish and return the result from the agent's perspective."""
     board = chess.Board()
     move_count = 0
     while not board.is_game_over() and move_count < max_moves:
         if board.turn == (chess.WHITE if play_as_white else chess.BLACK):
+            # Evaluate board before the agent moves
+            before = evaluate_board(board, engine, depth)
+            if not play_as_white:
+                before = -before
+
             agent.reset()
             inputs = encode_board(board)
             agent.receive_inputs(inputs)
@@ -112,29 +123,37 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
             move = choose_move(agent, board)
             if move is None or move not in board.legal_moves:
                 move = random.choice(list(board.legal_moves))
+            board.push(move)
+
+            after = evaluate_board(board, engine, depth)
+            if not play_as_white:
+                after = -after
+
+            # Reward is improvement in evaluation scaled to roughly [-1,1]
+            reward = (after - before) / 100.0
+            agent.learn(reward)
         else:
             result = engine.play(board, chess.engine.Limit(depth=depth))
-            move = result.move
-        board.push(move)
+            board.push(result.move)
         move_count += 1
 
     result = board.result(claim_draw=True)
     if result == '1-0':
-        return 1 if play_as_white else -1
+        final_reward = 1 if play_as_white else -1
     elif result == '0-1':
-        return -1 if play_as_white else 1
+        final_reward = -1 if play_as_white else 1
     else:
-        return 0
+        final_reward = 0
+    agent.learn(final_reward)
+    return final_reward
 
 
 def pretrain_agent(agent, engine_path='/usr/games/stockfish', games=5, depth=1):
-    """Warm start an agent by playing a few games against Stockfish."""
+    """Warm start an agent using Stockfish evaluations for feedback."""
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
     for _ in range(games):
-        result = play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
-        agent.learn(result)
-        result = play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
-        agent.learn(result)
+        play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
+        play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
     engine.quit()
 
 
