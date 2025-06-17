@@ -146,13 +146,13 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
     else:
         final_reward = 0
 
-    if np.random.rand() > .95:
+    if np.random.rand() > .99:
         if final_reward == 1:
-            print(f'Agent beat stockfish, depth {depth}')
+            print(f'Agent beat stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
         elif final_reward == -1:
-            print(f'Agent lost to stockfish, depth {depth}')
+            print(f'Agent lost to stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
         else:
-            print(f'Agent tied with stockfish, depth {depth}')
+            print(f'Agent tied with stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
     agent.learn(final_reward)
     return final_reward
 
@@ -277,9 +277,9 @@ if __name__ == '__main__':
     agent_a, agent_b = competitive_evolution(
         agent_a,
         agent_b,
-        rounds=1_000_000,
+        rounds=100_000,
         attempts=100,
-        pretrain_games=10_000,
+        pretrain_games=1_000_000,
     )
 
     # Save the evolved agents
