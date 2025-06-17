@@ -52,7 +52,7 @@ def play_game(agent_white, agent_black, max_moves=40):
         agent.reset()
         inputs = encode_board(board)
         agent.receive_inputs(inputs)
-        agent.step(think=2)
+        agent.think_until_convergence()
         move = choose_move(agent, board)
         if move is None or move not in board.legal_moves:
             move = random.choice(list(board.legal_moves))
@@ -120,7 +120,7 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
             agent.reset()
             inputs = encode_board(board)
             agent.receive_inputs(inputs)
-            agent.step(think=2)
+            agent.think_until_convergence()
             move = choose_move(agent, board)
             if move is None or move not in board.legal_moves:
                 move = random.choice(list(board.legal_moves))
