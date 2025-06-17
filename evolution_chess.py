@@ -3,6 +3,7 @@ import chess.engine
 import random
 import numpy as np
 import pickle
+import copy
 
 from Agent import Agent
 from mutations import mutate_agent
@@ -148,7 +149,7 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
     return final_reward
 
 
-def pretrain_agent(agent, engine_path='/usr/games/stockfish', games=5, depth=1):
+def pretrain_agent(agent, engine_path=engine_path = './stockfish/stockfish-ubuntu-x86-64-avx2', games=50, depth=1):
     """Warm start an agent using Stockfish evaluations for feedback."""
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
     for _ in range(games):
@@ -174,14 +175,14 @@ class RandomAgent(Agent):
 def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
                           mutation_rate=0.1, mutation_strength=0.2,
                           max_skill_gap=5, pretrain_games=0,
-                          stockfish_path='/usr/games/stockfish'):
+                          stockfish_path=engine_path = './stockfish/stockfish-ubuntu-x86-64-avx2'):
     """Evolve two agents while keeping their skill levels relatively close."""
 
     if pretrain_games > 0:
         print(f"Pretraining agents for {pretrain_games} games against Stockfish...")
         pretrain_agent(agent_a, stockfish_path, games=pretrain_games)
-        pretrain_agent(agent_b, stockfish_path, games=pretrain_games)
-
+        #pretrain_agent(agent_b, stockfish_path, games=pretrain_games)
+    agent_b = agent_a.copy()
     for r in range(rounds):
         skill_a = evaluate_agent(agent_a)
         skill_b = evaluate_agent(agent_b)
@@ -246,7 +247,7 @@ if __name__ == '__main__':
         agent_b,
         rounds=1_000_000,
         attempts=100,
-        pretrain_games=5,
+        pretrain_games=10_000,
     )
 
     # Save the evolved agents
