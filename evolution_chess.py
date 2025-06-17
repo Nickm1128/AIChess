@@ -1,9 +1,13 @@
 import chess
 import chess.engine
+import chess.svg
 import random
 import numpy as np
 import pickle
 import copy
+import imageio
+import cairosvg
+import io
 
 from Agent import Agent
 from mutations import mutate_agent
@@ -157,6 +161,38 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
     return final_reward
 
 
+def record_game_vs_stockfish(agent, engine_path, gif_path,
+                              play_as_white=True, max_moves=40, depth=1):
+    """Play a game against Stockfish and save the moves as an animated GIF."""
+    engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    board = chess.Board()
+    frames = []
+    move_count = 0
+
+    while not board.is_game_over() and move_count < max_moves:
+        if board.turn == (chess.WHITE if play_as_white else chess.BLACK):
+            agent.reset()
+            inputs = encode_board(board)
+            agent.receive_inputs(inputs)
+            agent.think_until_convergence()
+            move = choose_move(agent, board)
+            if move is None or move not in board.legal_moves:
+                move = random.choice(list(board.legal_moves))
+            board.push(move)
+        else:
+            result = engine.play(board, chess.engine.Limit(depth=depth))
+            board.push(result.move)
+
+        svg_data = chess.svg.board(board=board).encode("utf-8")
+        png_data = cairosvg.svg2png(bytestring=svg_data)
+        frames.append(imageio.v2.imread(io.BytesIO(png_data)))
+        move_count += 1
+
+    engine.quit()
+    if frames:
+        imageio.mimsave(gif_path, frames, duration=0.5)
+
+
 def pretrain_agent(
     agent,
     engine_path: str = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2',
@@ -270,6 +306,10 @@ def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
         print(
             f"    AgentB - skill {skill_b}, neurons {len(agent_b.neurons)}, wins vs A {wins_b}"
         )
+
+        if (r + 1) in {10_000, 100_000, 500_000}:
+            gif_name = f"round_{r + 1}_agent_vs_stockfish.gif"
+            record_game_vs_stockfish(agent_a, stockfish_path, gif_name)
     return agent_a, agent_b
 
 
@@ -278,11 +318,12 @@ if __name__ == '__main__':
     agent_a = Agent('AgentA', neuron_count)
     agent_b = Agent('AgentB', neuron_count)
 
-    # Run competitive evolution between the two agents with a short Stockfish pretrain
+    # Run competitive evolution between the two agents. Games against Stockfish
+    # will be rendered at 10k, 100k and 500k rounds.
     agent_a, agent_b = competitive_evolution(
         agent_a,
         agent_b,
-        rounds=100_000,
+        rounds=500_000,
         attempts=100,
         pretrain_games=1_000_000,
     )
