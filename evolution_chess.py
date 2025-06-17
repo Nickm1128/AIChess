@@ -164,11 +164,12 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
 def record_game_vs_stockfish(agent, engine_path, gif_path,
                               play_as_white=True, max_moves=40, depth=1):
     """Play a game against Stockfish and save the moves as an animated GIF."""
+    print('Recording stockfish game')
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
     board = chess.Board()
     frames = []
     move_count = 0
-
+    gif_path = 'workspace/AIChess/' + gif_path
     while not board.is_game_over() and move_count < max_moves:
         if board.turn == (chess.WHITE if play_as_white else chess.BLACK):
             agent.reset()
@@ -307,7 +308,7 @@ def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
             f"    AgentB - skill {skill_b}, neurons {len(agent_b.neurons)}, wins vs A {wins_b}"
         )
 
-        if (r + 1) in {10_000, 100_000, 500_000}:
+        if (r + 1) in {100,  10_000, 100_000, 500_000}:
             gif_name = f"round_{r + 1}_agent_vs_stockfish.gif"
             record_game_vs_stockfish(agent_a, stockfish_path, gif_name)
     return agent_a, agent_b
