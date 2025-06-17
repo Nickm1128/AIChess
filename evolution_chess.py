@@ -176,8 +176,8 @@ def pretrain_agent(
     multiplier = 1
     for _ in range(games):
         base_score = 0
-        base_score += play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
-        base_score += play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
+        base_score += play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth, round = _)
+        base_score += play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth, round = _)
 
         # Attempt a mutation and keep it if performance does not decrease
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
