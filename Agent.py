@@ -83,6 +83,18 @@ class Agent:
             for n in self.neurons:
                 n.update()
 
+    def think_until_convergence(self, max_rounds=20, threshold=0.001):
+        """Iterate until neuron states stabilize or max_rounds reached."""
+        prev = [n.state for n in self.neurons]
+        for i in range(1, max_rounds + 1):
+            self.step(1)
+            curr = [n.state for n in self.neurons]
+            diff = max(abs(a - b) for a, b in zip(prev, curr))
+            if diff < threshold:
+                return i
+            prev = curr
+        return max_rounds
+
     def learn(self, reward_value): # Renamed 'won' to 'reward_value' for clarity
         for syn in self.synapses:
             syn.update_weight(reward_value) # Pass the numerical reward
