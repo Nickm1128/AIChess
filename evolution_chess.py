@@ -106,7 +106,7 @@ def evaluate_board(board, engine, depth=1):
     return info["score"].white().score(mate_score=10000)
 
 
-def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, depth=1):
+def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, depth=1, round=0):
     """Play a single game against Stockfish and return the result from the agent's perspective."""
     board = chess.Board()
     move_count = 0
@@ -148,11 +148,11 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
 
     if np.random.rand() > .99:
         if final_reward == 1:
-            print(f'Agent beat stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
+            print(f'Round: {round} Agent beat stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
         elif final_reward == -1:
-            print(f'Agent lost to stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
+            print(f'Round: {round} Agent lost to stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
         else:
-            print(f'Agent tied with stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
+            print(f'Round: {round} Agent tied with stockfish, depth {depth}. Neurons: {len(agent.neurons)}')
     agent.learn(final_reward)
     return final_reward
 
@@ -173,19 +173,24 @@ def pretrain_agent(
     current agent, the mutation is kept for subsequent rounds.
     """
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
+    multiplier = 1
     for _ in range(games):
         base_score = 0
         base_score += play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
         base_score += play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
 
         # Attempt a mutation and keep it if performance does not decrease
-        mutant = mutate_agent(agent, mutation_rate, mutation_strength)
+        mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
+        multiplier = (games - _) / games
         mutant_score = 0
-        mutant_score += play_game_vs_stockfish(mutant, engine, play_as_white=True, depth=depth)
-        mutant_score += play_game_vs_stockfish(mutant, engine, play_as_white=False, depth=depth)
+        mutant_score += play_game_vs_stockfish(mutant, engine, play_as_white=True, depth=depth, round = _)
+        mutant_score += play_game_vs_stockfish(mutant, engine, play_as_white=False, depth=depth, round = _)
 
         if mutant_score >= base_score:
             agent = mutant
+
+        if mutant_score > 1:
+            depth = np.min([depth+1, 10])
     engine.quit()
     return agent
 
