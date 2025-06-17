@@ -145,6 +145,14 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
         final_reward = -1 if play_as_white else 1
     else:
         final_reward = 0
+
+    if np.random.rand() > .95:
+        if final_reward == 1:
+            print(f'Agent beat stockfish, depth {depth}')
+        elif final_reward == -1:
+            print(f'Agent lost to stockfish, depth {depth}')
+        else:
+            print(f'Agent tied with stockfish, depth {depth}')
     agent.learn(final_reward)
     return final_reward
 
