@@ -149,7 +149,7 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
     return final_reward
 
 
-def pretrain_agent(agent, engine_path=engine_path = './stockfish/stockfish-ubuntu-x86-64-avx2', games=50, depth=1):
+def pretrain_agent(agent, engine_path = './stockfish/stockfish-ubuntu-x86-64-avx2', games=50, depth=1):
     """Warm start an agent using Stockfish evaluations for feedback."""
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
     for _ in range(games):
@@ -175,7 +175,7 @@ class RandomAgent(Agent):
 def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
                           mutation_rate=0.1, mutation_strength=0.2,
                           max_skill_gap=5, pretrain_games=0,
-                          stockfish_path=engine_path = './stockfish/stockfish-ubuntu-x86-64-avx2'):
+                          stockfish_path = './stockfish/stockfish-ubuntu-x86-64-avx2'):
     """Evolve two agents while keeping their skill levels relatively close."""
 
     if pretrain_games > 0:
