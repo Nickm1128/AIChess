@@ -149,13 +149,37 @@ def play_game_vs_stockfish(agent, engine, play_as_white=True, max_moves=40, dept
     return final_reward
 
 
-def pretrain_agent(agent, engine_path = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2', games=50, depth=1):
-    """Warm start an agent using Stockfish evaluations for feedback."""
+def pretrain_agent(
+    agent,
+    engine_path: str = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2',
+    games: int = 50,
+    depth: int = 1,
+    mutation_rate: float = 0.1,
+    mutation_strength: float = 0.2,
+):
+    """Warm start an agent using Stockfish evaluations for feedback.
+
+    The agent is periodically mutated during pretraining. After each pair of
+    games against Stockfish, a mutated copy of the agent is created. If the
+    mutated version achieves a better or equal result against Stockfish than the
+    current agent, the mutation is kept for subsequent rounds.
+    """
     engine = chess.engine.SimpleEngine.popen_uci(engine_path)
     for _ in range(games):
-        play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
-        play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
+        base_score = 0
+        base_score += play_game_vs_stockfish(agent, engine, play_as_white=True, depth=depth)
+        base_score += play_game_vs_stockfish(agent, engine, play_as_white=False, depth=depth)
+
+        # Attempt a mutation and keep it if performance does not decrease
+        mutant = mutate_agent(agent, mutation_rate, mutation_strength)
+        mutant_score = 0
+        mutant_score += play_game_vs_stockfish(mutant, engine, play_as_white=True, depth=depth)
+        mutant_score += play_game_vs_stockfish(mutant, engine, play_as_white=False, depth=depth)
+
+        if mutant_score >= base_score:
+            agent = mutant
     engine.quit()
+    return agent
 
 
 class RandomAgent(Agent):
@@ -180,8 +204,8 @@ def competitive_evolution(agent_a, agent_b, rounds=10, attempts=5,
 
     if pretrain_games > 0:
         print(f"Pretraining agents for {pretrain_games} games against Stockfish...")
-        pretrain_agent(agent_a, stockfish_path, games=pretrain_games)
-        #pretrain_agent(agent_b, stockfish_path, games=pretrain_games)
+        agent_a = pretrain_agent(agent_a, stockfish_path, games=pretrain_games)
+        #agent_b = pretrain_agent(agent_b, stockfish_path, games=pretrain_games)
     agent_b = agent_a.copy()
     for r in range(rounds):
         skill_a = evaluate_agent(agent_a)
