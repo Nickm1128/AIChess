@@ -75,18 +75,51 @@ def generate_batch(engine: chess.engine.SimpleEngine, batch_size: int, depth: in
     return boards, moves
 
 
-def evaluate_agent(agent: Agent, boards: List[chess.Board], moves: List[chess.Move]) -> int:
-    """Return how many moves the agent predicts correctly for the given boards."""
-    correct = 0
+def evaluate_agent(
+    agent: Agent,
+    engine: chess.engine.SimpleEngine,
+    boards: List[chess.Board],
+    moves: List[chess.Move],
+    depth: int = 1,
+) -> float:
+    """Return a score based on how close the agent's moves are to Stockfish.
+
+    Instead of simply counting correct predictions, this function analyses the
+    board evaluation after the agent's chosen move and compares it with the
+    evaluation after Stockfish's move. The closer the two evaluations are, the
+    higher (less negative) the returned score will be.
+    """
+
+    score = 0.0
     for board, true_move in zip(boards, moves):
         agent.reset()
         inputs = encode_board(board)
         agent.receive_inputs(inputs)
         agent.step(think=5)
+
         predicted = choose_move(agent, board)
-        if predicted == true_move:
-            correct += 1
-    return correct
+
+        # Evaluate Stockfish's chosen continuation
+        board_true = board.copy()
+        board_true.push(true_move)
+        info_true = engine.analyse(board_true, chess.engine.Limit(depth=depth))
+        stockfish_eval = info_true["score"].white().score(mate_score=100000)
+
+        # Evaluate the agent's chosen continuation (if legal)
+        board_pred = board.copy()
+        if predicted in board_pred.legal_moves:
+            board_pred.push(predicted)
+            info_pred = engine.analyse(
+                board_pred, chess.engine.Limit(depth=depth)
+            )
+            agent_eval = info_pred["score"].white().score(mate_score=100000)
+        else:
+            # Illegal move - heavily penalise
+            agent_eval = -100000
+
+        score -= abs(agent_eval - stockfish_eval)
+
+    return score
 
 
 def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
@@ -109,13 +142,13 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
     engine = chess.engine.SimpleEngine.popen_uci(ENGINE_PATH)
     agent = create_agent('StockfishMimic', 10)
     boards, moves = generate_batch(engine, batch_size, depth)
-    best_score = evaluate_agent(agent, boards, moves)
+    best_score = evaluate_agent(agent, engine, boards, moves, depth)
 
     for r in range(rounds):
         multiplier = np.random.uniform(0,.1)
             
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
-        score = evaluate_agent(mutant, boards, moves)
+        score = evaluate_agent(mutant, engine, boards, moves, depth)
         if score > best_score:
             agent = mutant
             best_score = score
@@ -123,7 +156,7 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             #boards, moves = generate_batch(engine, batch_size, depth)
         if r % 5 == 0:
             boards, moves = generate_batch(engine, batch_size, depth)
-            best_score = evaluate_agent(agent, boards, moves)
+            best_score = evaluate_agent(agent, engine, boards, moves, depth)
         if r % 100 == 0:
             print(f'Round {r}: best score {best_score}/{batch_size}')
 
