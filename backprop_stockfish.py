@@ -209,7 +209,7 @@ def train_cached(
     mutation_rate: float = 0.1,
     mutation_strength: float = 0.2,
     attempts_per_position: int = 5,
-    rounds: int = 10,
+    rounds: int = 1_000,
 ) -> Agent:
     """Train using cached Stockfish evaluations."""
 
