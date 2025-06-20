@@ -119,7 +119,7 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             agent = mutant
             best_score = score
             boards, moves = generate_batch(engine, batch_size, depth)
-        if r % 5 == 0:
+        if r % 500 == 0:
             boards, moves = generate_batch(engine, batch_size, depth)
             best_score = evaluate_agent(agent, boards, moves)
         if r % 100 == 0:
