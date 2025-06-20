@@ -208,10 +208,15 @@ def train_cached(
     depth: int = 1,
     mutation_rate: float = 0.1,
     mutation_strength: float = 0.2,
-    attempts_per_position: int = 5,
+    attempts_per_batch: int = 500,
     rounds: int = 1_000,
 ) -> Agent:
-    """Train using cached Stockfish evaluations."""
+    """Train using cached Stockfish evaluations.
+
+    Each round generates ``positions`` board states. The agent is scored on the
+    sum of its evaluations across all of these states. ``attempts_per_batch``
+    controls how many mutations are tried for the entire batch of positions.
+    """
 
     engine = chess.engine.SimpleEngine.popen_uci(ENGINE_PATH)
 
@@ -223,30 +228,28 @@ def train_cached(
         # Generate a fresh cache each round so the agent sees new positions
         cache = generate_cached_positions(engine, positions, depth)
 
-        for entry in cache:
-            parent_score, parent_move = evaluate_cached(agent, entry)
-            best_agent = agent
-            best_score = parent_score
-            best_move = parent_move
+        def evaluate_batch(test_agent: Agent) -> float:
+            total = 0.0
+            for entry in cache:
+                score, _ = evaluate_cached(test_agent, entry)
+                total += score
+            return total
 
-            for _m in range(attempts_per_position):
-                mutant = mutate_agent(agent, mutation_rate, mutation_strength)
-                score, move = evaluate_cached(mutant, entry)
-                if score > best_score:
-                    best_score = score
-                    best_agent = mutant
-                    best_move = move
-                if move == entry["best_move"]:
-                    best_agent = mutant
-                    best_move = move
-                    break
-            best_score_tracker.append(best_score)
-            # Replace the parent if the mutant performed better
-            if best_score > parent_score:
-                agent = best_agent
+        parent_score = evaluate_batch(agent)
+        best_agent = agent
+        best_score = parent_score
 
-            if best_move == entry["best_move"]:
-                pass  # Already matched Stockfish on this position
+        for _m in range(attempts_per_batch):
+            mutant = mutate_agent(agent, mutation_rate, mutation_strength)
+            score = evaluate_batch(mutant)
+            if score > best_score:
+                best_score = score
+                best_agent = mutant
+
+        best_score_tracker.append(best_score)
+
+        if best_score > parent_score:
+            agent = best_agent
 
     # Ensure the save directory exists before writing any files
     os.makedirs(SAVE_DIRECTORY, exist_ok=True)
