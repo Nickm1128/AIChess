@@ -102,7 +102,7 @@ def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
 
 
 def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
-          mutation_rate: float = 0.9, mutation_strength: float = 0.9) -> Agent:
+          mutation_rate: float = 0.9, mutation_strength: float = 1.0) -> Agent:
     mm = 1
     best_score_round = 0
     """Evolve an agent to mimic Stockfish move choices."""
@@ -112,12 +112,7 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
     best_score = evaluate_agent(agent, boards, moves)
 
     for r in range(rounds):
-        multiplier = 0
-        
-        if np.random.rand() > .5:
-            multiplier = np.max([.1, np.random.rand()])
-        else:
-            multiplier = .01
+        multiplier = np.random.uniform(0,.1)
             
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
         score = evaluate_agent(mutant, boards, moves)
