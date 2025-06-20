@@ -79,10 +79,12 @@ def generate_cached_positions(
     engine: chess.engine.SimpleEngine, count: int, depth: int = 1
 ) -> List[Dict[str, object]]:
     """Precompute evaluations for a number of board positions."""
-
+    print('Generating position cache...')
     cache = []
     board = chess.Board()
     for _ in range(count):
+        if _ % 10 == 0:
+            print(f'Completed {_} generated positions')
         if board.is_game_over():
             board = chess.Board()
 
