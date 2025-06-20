@@ -205,6 +205,8 @@ def train_cached(
 
     agent = create_agent("StockfishMimic", 10)
 
+    best_score_tracker = []
+
     for _ in range(rounds):
         # Generate a fresh cache each round so the agent sees new positions
         cache = generate_cached_positions(engine, positions, depth)
@@ -226,13 +228,23 @@ def train_cached(
                     best_agent = mutant
                     best_move = move
                     break
-
+            best_score_tracker.append(best_score)
             # Replace the parent if the mutant performed better
             if best_score > parent_score:
                 agent = best_agent
 
             if best_move == entry["best_move"]:
                 pass  # Already matched Stockfish on this position
+
+    save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
+    with open(save_path, 'wb') as f:
+        pickle.dump(agent, f)
+    print(f"Saved agent to {save_path}")
+
+    save_path = os.path.join(SAVE_DIRECTORY, f"best_scores.pkl")
+    with open(save_path, 'wb') as f:
+        pickle.dump(best_score_tracker, f)
+    print(f"Saved scores record to {save_path}")
 
     engine.quit()
     return agent
