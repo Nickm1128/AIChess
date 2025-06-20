@@ -40,9 +40,22 @@ def choose_move(agent: Agent, board: chess.Board) -> chess.Move:
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
+
     outputs = np.array([n.state for n in agent.output_neurons])
-    probs = np.exp(outputs) / np.sum(np.exp(outputs))
-    index = np.random.choice(len(legal_moves), p=probs / np.sum(probs))
+    
+    # Resize to match the number of legal moves
+    if len(outputs) < len(legal_moves):
+        # Pad with zeros
+        outputs = np.pad(outputs, (0, len(legal_moves) - len(outputs)), constant_values=0)
+    elif len(outputs) > len(legal_moves):
+        # Trim excess
+        outputs = outputs[:len(legal_moves)]
+
+    # Softmax to convert outputs to probabilities
+    exp_outputs = np.exp(outputs - np.max(outputs))  # Stability trick
+    probs = exp_outputs / np.sum(exp_outputs)
+
+    index = np.random.choice(len(legal_moves), p=probs)
     return legal_moves[index]
 
 
@@ -113,10 +126,9 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             print(f'Round {r}: best score {best_score}/{batch_size}')
 
     save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
-    if len(population) > 0:
-        with open(save_path, 'wb') as f:
-            pickle.dump(population, f)
-        print(f"Saved agent to {save_path}")
+    with open(save_path, 'wb') as f:
+        pickle.dump(population, f)
+    print(f"Saved agent to {save_path}")
 
     engine.quit()
     return agent
