@@ -13,7 +13,7 @@ SAVE_DIRECTORY = "trained_agents"
 # Path to the Stockfish engine. The repository previously expected the engine
 # to be located in ``/workspace/stockfish`` but that binary is not included.
 # Use the system wide Stockfish installation if available.
-ENGINE_PATH = '/usr/games/stockfish'
+ENGINE_PATH = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2'
 
 
 def encode_board(board: chess.Board) -> List[float]:
