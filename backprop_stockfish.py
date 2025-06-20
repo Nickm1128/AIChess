@@ -40,9 +40,9 @@ def choose_move(agent: Agent, board: chess.Board) -> chess.Move:
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
-    output_val = sum(n.state for n in agent.output_neurons) / len(agent.output_neurons)
-    index = int(((output_val + 1) / 2) * len(legal_moves))
-    index = max(0, min(index, len(legal_moves) - 1))
+    outputs = np.array([n.state for n in agent.output_neurons])
+    probs = np.exp(outputs) / np.sum(np.exp(outputs))
+    index = np.random.choice(len(legal_moves), p=probs / np.sum(probs))
     return legal_moves[index]
 
 
@@ -98,7 +98,7 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
 
     for r in range(rounds):
         multiplier = (rounds -  r) / rounds
-        
+        multiplier = max(0.2, (rounds - r) / rounds)
         
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
         score = evaluate_agent(mutant, boards, moves)
@@ -106,9 +106,10 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             agent = mutant
             best_score = score
             boards, moves = generate_batch(engine, batch_size, depth)
-        if r % 100 == 0:
+        if r % 5 == 0:
             boards, moves = generate_batch(engine, batch_size, depth)
             best_score = evaluate_agent(agent, boards, moves)
+        if r % 100 == 0:
             print(f'Round {r}: best score {best_score}/{batch_size}')
 
     save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
