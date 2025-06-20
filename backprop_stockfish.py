@@ -2,7 +2,7 @@ import random
 from typing import List, Tuple
 import os
 import pickle
-
+import numpy as np
 import chess
 import chess.engine
 
