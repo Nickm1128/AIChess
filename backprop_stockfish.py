@@ -39,27 +39,36 @@ def encode_board(board: chess.Board) -> List[float]:
 
 
 def choose_move(agent: Agent, board: chess.Board) -> chess.Move:
-    """Select a legal move based on the agent's output neurons."""
+    """Select a legal move based on the agent's output neurons.
+
+    This function now guarantees the returned move is legal. If, for any
+    unexpected reason, the sampled move is not legal, it falls back to a random
+    legal move.
+    """
+
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
 
     outputs = np.array([n.state for n in agent.output_neurons])
-    
-    # Resize to match the number of legal moves
+
+    # Resize outputs to the number of legal moves
     if len(outputs) < len(legal_moves):
-        # Pad with zeros
         outputs = np.pad(outputs, (0, len(legal_moves) - len(outputs)), constant_values=0)
     elif len(outputs) > len(legal_moves):
-        # Trim excess
         outputs = outputs[:len(legal_moves)]
 
-    # Softmax to convert outputs to probabilities
-    exp_outputs = np.exp(outputs - np.max(outputs))  # Stability trick
+    exp_outputs = np.exp(outputs - np.max(outputs))  # Softmax (stable)
     probs = exp_outputs / np.sum(exp_outputs)
 
     index = np.random.choice(len(legal_moves), p=probs)
-    return legal_moves[index]
+    move = legal_moves[index]
+
+    # Extra safety: ensure the move is legal (should always be true)
+    if move not in board.legal_moves:
+        move = random.choice(legal_moves)
+
+    return move
 
 
 def generate_batch(engine: chess.engine.SimpleEngine, batch_size: int, depth: int = 1
@@ -145,16 +154,16 @@ def evaluate_agent(
         info_true = engine.analyse(board_true, chess.engine.Limit(depth=depth))
         stockfish_eval = info_true["score"].white().score(mate_score=100000)
 
-        # Evaluate the agent's chosen continuation (if legal)
+        # Evaluate the agent's chosen continuation
         board_pred = board.copy()
-        if predicted in board_pred.legal_moves:
+        if predicted is not None:
             board_pred.push(predicted)
             info_pred = engine.analyse(
                 board_pred, chess.engine.Limit(depth=depth)
             )
             agent_eval = info_pred["score"].white().score(mate_score=100000)
         else:
-            # Illegal move - heavily penalise
+            # No legal moves - heavily penalise
             agent_eval = -100000
 
         score -= abs(agent_eval - stockfish_eval)
