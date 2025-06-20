@@ -29,7 +29,7 @@ def encode_board(board: chess.Board):
     data.append(1.0 if board.turn == chess.WHITE else -1.0)
     return data
 
-ENGINE_PATH = '/usr/games/stockfish'
+ENGINE_PATH = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2'
 
 MOVE_SPACE = 64 * 64  # from_square * 64 + to_square, ignore promotions
 
