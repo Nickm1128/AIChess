@@ -1,5 +1,7 @@
 import random
 from typing import List, Tuple
+import os
+import pickle
 
 import chess
 import chess.engine
@@ -7,7 +9,7 @@ import chess.engine
 from Agent import Agent, Synapse
 from mutations import mutate_agent
 
-
+SAVE_DIRECTORY = "trained_agents"
 ENGINE_PATH = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2'
 
 
@@ -87,7 +89,7 @@ def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
 
 
 def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
-          mutation_rate: float = 0.1, mutation_strength: float = 0.9) -> Agent:
+          mutation_rate: float = 0.9, mutation_strength: float = 0.9) -> Agent:
     """Evolve an agent to mimic Stockfish move choices."""
     engine = chess.engine.SimpleEngine.popen_uci(ENGINE_PATH)
     agent = create_agent('StockfishMimic', 10)
@@ -104,6 +106,12 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             boards, moves = generate_batch(engine, batch_size, depth)
         if r % 100 == 0:
             print(f'Round {r}: best score {best_score}/{batch_size}')
+
+    save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
+    if len(population) > 0:
+        with open(save_path, 'wb') as f:
+            pickle.dump(population, f)
+        print(f"Saved agent to {save_path}")
 
     engine.quit()
     return agent
