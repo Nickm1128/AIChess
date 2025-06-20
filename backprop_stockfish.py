@@ -251,6 +251,9 @@ def train_cached(
         if best_score > parent_score:
             agent = best_agent
 
+        print(f"Best agent neuron count: {len(agent.neurons)}")
+        print(f"Best agent synapse count: {len(agent.synapses)}")        
+
     # Ensure the save directory exists before writing any files
     os.makedirs(SAVE_DIRECTORY, exist_ok=True)
 
