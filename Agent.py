@@ -43,12 +43,10 @@ class Synapse:
             signal = 1.0 if self.pre.state > 0 else -1.0
             self.post.receive(signal * self.weight)
 
-    def update_weight(self, reward):
-        # Now 'reward' is a float, not just boolean. Adjust delta accordingly.
+    def update_weight(self):
         if self.pre.fired and self.post.fired:
-            # delta = self.learning_rate if reward else -self.learning_rate # Original binary logic
-            delta = self.learning_rate * reward # Scale learning rate by reward magnitude
-            self.weight = max(min(self.weight + delta, 2.0), -2.0)
+            delta = self.learning_rate 
+            self.weight = max(min(self.weight + delta, 1.0), -1.0)
 
 
 class Agent:
@@ -80,41 +78,11 @@ class Agent:
         for round in range(think):
             for syn in self.synapses:
                 syn.propagate()
+                syn.update_weight()
             for n in self.neurons:
                 n.update()
-
-    def think_until_convergence(self, max_rounds=20, threshold=0.001):
-        """Iterate until neuron states stabilize or max_rounds reached."""
-        prev = [n.state for n in self.neurons]
-        for i in range(1, max_rounds + 1):
-            self.step(1)
-            curr = [n.state for n in self.neurons]
-            diff = max(abs(a - b) for a, b in zip(prev, curr))
-            if diff < threshold:
-                return i
-            prev = curr
-        return max_rounds
-
-    def learn(self, reward_value): # Renamed 'won' to 'reward_value' for clarity
-        for syn in self.synapses:
-            syn.update_weight(reward_value) # Pass the numerical reward
-
 
     def receive_inputs(self, inputs):
         for i, value in enumerate(inputs):
             if i < len(self.neurons):
                 self.neurons[i].receive(value)
-
-    def decide_action(self):
-        output_mean = np.mean([n.state for n in self.output_neurons])
-
-        if output_mean < -0.5:
-            return 'jump_left'
-        elif -0.5 <= output_mean < 0:
-            return 'left'
-        elif 0 < output_mean <= 0.5:
-            return 'right'
-        elif output_mean > 0.5:
-            return 'jump_right'
-        else:
-            return 'wait'
