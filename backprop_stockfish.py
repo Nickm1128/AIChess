@@ -98,6 +98,8 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
 
     for r in range(rounds):
         multiplier = (rounds -  r) / rounds
+        
+        
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
         score = evaluate_agent(mutant, boards, moves)
         if score > best_score:
@@ -105,6 +107,8 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             best_score = score
             boards, moves = generate_batch(engine, batch_size, depth)
         if r % 100 == 0:
+            boards, moves = generate_batch(engine, batch_size, depth)
+            best_score = evaluate_agent(agent, boards, moves)
             print(f'Round {r}: best score {best_score}/{batch_size}')
 
     save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
