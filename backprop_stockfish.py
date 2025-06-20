@@ -125,7 +125,7 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             best_score = score
             best_score_round = r
             #boards, moves = generate_batch(engine, batch_size, depth)
-        if best_score >= 24:
+        if r % 5000 == 0:
             boards, moves = generate_batch(engine, batch_size, depth)
             best_score = evaluate_agent(agent, boards, moves)
         if r % 100 == 0:
