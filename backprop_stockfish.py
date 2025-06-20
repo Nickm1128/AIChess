@@ -103,6 +103,8 @@ def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
 
 def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
           mutation_rate: float = 0.9, mutation_strength: float = 0.9) -> Agent:
+    mm = 1
+    best_score_round = 0
     """Evolve an agent to mimic Stockfish move choices."""
     engine = chess.engine.SimpleEngine.popen_uci(ENGINE_PATH)
     agent = create_agent('StockfishMimic', 10)
@@ -113,11 +115,15 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
         multiplier = (rounds -  r) / rounds
         multiplier = max(0.2, (rounds - r) / rounds)
         
+        if r - best_score_round > 999:
+            multiplier = np.max([.1, np.random.rand()])
+            
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
         score = evaluate_agent(mutant, boards, moves)
         if score > best_score:
             agent = mutant
             best_score = score
+            best_score_round = r
             #boards, moves = generate_batch(engine, batch_size, depth)
         if best_score >= 24:
             boards, moves = generate_batch(engine, batch_size, depth)
