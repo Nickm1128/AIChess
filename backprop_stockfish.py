@@ -95,7 +95,7 @@ def generate_cached_positions(
     cache = []
     board = chess.Board()
     for _ in range(count):
-        if _ % 10 == 0:
+        if _ % 250 == 0:
             print(f'Completed {_} generated positions')
         if board.is_game_over():
             board = chess.Board()
@@ -207,7 +207,7 @@ def train_cached(
     positions: int = 1000,
     depth: int = 1,
     mutation_rate: float = 0.1,
-    mutation_strength: float = 0.2,
+    mutation_strength: float = 0.1,
     attempts_per_batch: int = 500,
     rounds: int = 1_000,
 ) -> Agent:
@@ -272,7 +272,7 @@ def train_cached(
 
 
 def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
-          mutation_rate: float = 0.9, mutation_strength: float = 1.0) -> Agent:
+          mutation_rate: float = 1.0, mutation_strength: float = 1.0) -> Agent:
     mm = 1
     best_score_round = 0
     """Evolve an agent to mimic Stockfish move choices."""
@@ -291,9 +291,9 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
             best_score = score
             best_score_round = r
             #boards, moves = generate_batch(engine, batch_size, depth)
-        if r % 5 == 0:
-            boards, moves = generate_batch(engine, batch_size, depth)
-            best_score = evaluate_agent(agent, engine, boards, moves, depth)
+        # if r % 5 == 0:
+        #     boards, moves = generate_batch(engine, batch_size, depth)
+        #     best_score = evaluate_agent(agent, engine, boards, moves, depth)
         if r % 100 == 0:
             print(f'Round {r}: best score {best_score}/{batch_size}')
 
