@@ -116,7 +116,10 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
         multiplier = max(0.2, (rounds - r) / rounds)
         
         if r - best_score_round > 999:
-            multiplier = np.max([.1, np.random.rand()])
+            if np.random.rand() > .5:
+                multiplier = np.max([.1, np.random.rand()])
+            else:
+                multiplier = .01
             
         mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
         score = evaluate_agent(mutant, boards, moves)
