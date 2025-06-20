@@ -192,12 +192,12 @@ def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
 
 
 def train_cached(
-    positions: int = 10000,
+    positions: int = 1000,
     depth: int = 1,
     mutation_rate: float = 0.1,
     mutation_strength: float = 0.2,
     attempts_per_position: int = 5,
-    rounds: int = 1,
+    rounds: int = 10,
 ) -> Agent:
     """Train using cached Stockfish evaluations."""
 
