@@ -10,7 +10,10 @@ from Agent import Agent, Synapse
 from mutations import mutate_agent
 
 SAVE_DIRECTORY = "trained_agents"
-ENGINE_PATH = '/workspace/stockfish/stockfish-ubuntu-x86-64-avx2'
+# Path to the Stockfish engine. The repository previously expected the engine
+# to be located in ``/workspace/stockfish`` but that binary is not included.
+# Use the system wide Stockfish installation if available.
+ENGINE_PATH = '/usr/games/stockfish'
 
 
 def encode_board(board: chess.Board) -> List[float]:
@@ -236,13 +239,16 @@ def train_cached(
             if best_move == entry["best_move"]:
                 pass  # Already matched Stockfish on this position
 
-    save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
-    with open(save_path, 'wb') as f:
+    # Ensure the save directory exists before writing any files
+    os.makedirs(SAVE_DIRECTORY, exist_ok=True)
+
+    save_path = os.path.join(SAVE_DIRECTORY, "best_agent.pkl")
+    with open(save_path, "wb") as f:
         pickle.dump(agent, f)
     print(f"Saved agent to {save_path}")
 
-    save_path = os.path.join(SAVE_DIRECTORY, f"best_scores.pkl")
-    with open(save_path, 'wb') as f:
+    save_path = os.path.join(SAVE_DIRECTORY, "best_scores.pkl")
+    with open(save_path, "wb") as f:
         pickle.dump(best_score_tracker, f)
     print(f"Saved scores record to {save_path}")
 
@@ -276,9 +282,11 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
         if r % 100 == 0:
             print(f'Round {r}: best score {best_score}/{batch_size}')
 
-    save_path = os.path.join(SAVE_DIRECTORY, f"best_agent.pkl")
-    with open(save_path, 'wb') as f:
-        pickle.dump(population, f)
+    os.makedirs(SAVE_DIRECTORY, exist_ok=True)
+
+    save_path = os.path.join(SAVE_DIRECTORY, "best_agent.pkl")
+    with open(save_path, "wb") as f:
+        pickle.dump(agent, f)
     print(f"Saved agent to {save_path}")
 
     engine.quit()
