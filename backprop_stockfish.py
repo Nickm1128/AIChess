@@ -96,7 +96,7 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
 
     for r in range(rounds):
         multiplier = (rounds -  r) / rounds
-        mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * mulitiplier)
+        mutant = mutate_agent(agent, mutation_rate * multiplier, mutation_strength * multiplier)
         score = evaluate_agent(mutant, boards, moves)
         if score > best_score:
             agent = mutant
