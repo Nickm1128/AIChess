@@ -204,10 +204,11 @@ def train_cached(
     engine = chess.engine.SimpleEngine.popen_uci(ENGINE_PATH)
 
     agent = create_agent("StockfishMimic", 10)
-    cache = generate_cached_positions(engine, positions, depth)
-    index = 0
 
     for _ in range(rounds):
+        # Generate a fresh cache each round so the agent sees new positions
+        cache = generate_cached_positions(engine, positions, depth)
+
         for entry in cache:
             parent_score, parent_move = evaluate_cached(agent, entry)
             best_agent = agent
@@ -226,19 +227,12 @@ def train_cached(
                     best_move = move
                     break
 
-            # If mutant and parent get same score, keep parent
-            if best_score == parent_score:
-                agent = agent
-            else:
+            # Replace the parent if the mutant performed better
+            if best_score > parent_score:
                 agent = best_agent
 
-            index += 1
             if best_move == entry["best_move"]:
-                pass  # proceed automatically
-
-        # After processing current cache, generate a new one
-        cache = generate_cached_positions(engine, positions, depth)
-        index = 0
+                pass  # Already matched Stockfish on this position
 
     engine.quit()
     return agent
