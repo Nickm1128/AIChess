@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 import os
 import pickle
 import numpy as np
@@ -75,6 +75,41 @@ def generate_batch(engine: chess.engine.SimpleEngine, batch_size: int, depth: in
     return boards, moves
 
 
+def generate_cached_positions(
+    engine: chess.engine.SimpleEngine, count: int, depth: int = 1
+) -> List[Dict[str, object]]:
+    """Precompute evaluations for a number of board positions."""
+
+    cache = []
+    board = chess.Board()
+    for _ in range(count):
+        if board.is_game_over():
+            board = chess.Board()
+
+        # Determine Stockfish best move for the current position
+        result = engine.play(board, chess.engine.Limit(depth=depth))
+        best_move = result.move
+
+        evaluations = {}
+        for move in board.legal_moves:
+            board_after = board.copy()
+            board_after.push(move)
+            info = engine.analyse(board_after, chess.engine.Limit(depth=depth))
+            evaluations[move.uci()] = info["score"].white().score(mate_score=100000)
+
+        cache.append(
+            {
+                "fen": board.fen(),
+                "best_move": best_move.uci(),
+                "evals": evaluations,
+            }
+        )
+
+        board.push(best_move)
+
+    return cache
+
+
 def evaluate_agent(
     agent: Agent,
     engine: chess.engine.SimpleEngine,
@@ -122,6 +157,26 @@ def evaluate_agent(
     return score
 
 
+def evaluate_cached(agent: Agent, entry: Dict[str, object]) -> Tuple[float, str]:
+    """Evaluate agent on a cached board position."""
+    board = chess.Board(entry["fen"])
+    agent.reset()
+    inputs = encode_board(board)
+    agent.receive_inputs(inputs)
+    agent.step(think=5)
+
+    move = choose_move(agent, board)
+    if move is None:
+        return -100000.0, ""
+
+    move_uci = move.uci()
+    pred_eval = entry["evals"].get(move_uci, -100000)
+    best_eval = entry["evals"][entry["best_move"]]
+
+    score = -abs(pred_eval - best_eval)
+    return score, move_uci
+
+
 def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
     """Create an agent with a custom number of synapses per neuron."""
     agent = Agent(name, neuron_count)
@@ -131,6 +186,59 @@ def create_agent(name: str = 'Agent', neuron_count: int = 10) -> Agent:
             pre, post = random.sample(agent.neurons, 2)
             weight = random.uniform(-1, 1)
             agent.synapses.append(Synapse(pre, post, weight))
+    return agent
+
+
+def train_cached(
+    positions: int = 10000,
+    depth: int = 1,
+    mutation_rate: float = 0.1,
+    mutation_strength: float = 0.2,
+    attempts_per_position: int = 5,
+    rounds: int = 1,
+) -> Agent:
+    """Train using cached Stockfish evaluations."""
+
+    engine = chess.engine.SimpleEngine.popen_uci(ENGINE_PATH)
+
+    agent = create_agent("StockfishMimic", 10)
+    cache = generate_cached_positions(engine, positions, depth)
+    index = 0
+
+    for _ in range(rounds):
+        for entry in cache:
+            parent_score, parent_move = evaluate_cached(agent, entry)
+            best_agent = agent
+            best_score = parent_score
+            best_move = parent_move
+
+            for _m in range(attempts_per_position):
+                mutant = mutate_agent(agent, mutation_rate, mutation_strength)
+                score, move = evaluate_cached(mutant, entry)
+                if score > best_score:
+                    best_score = score
+                    best_agent = mutant
+                    best_move = move
+                if move == entry["best_move"]:
+                    best_agent = mutant
+                    best_move = move
+                    break
+
+            # If mutant and parent get same score, keep parent
+            if best_score == parent_score:
+                agent = agent
+            else:
+                agent = best_agent
+
+            index += 1
+            if best_move == entry["best_move"]:
+                pass  # proceed automatically
+
+        # After processing current cache, generate a new one
+        cache = generate_cached_positions(engine, positions, depth)
+        index = 0
+
+    engine.quit()
     return agent
 
 
@@ -170,4 +278,4 @@ def train(rounds: int = 1_000_000, batch_size: int = 32, depth: int = 1,
 
 
 if __name__ == '__main__':
-    train()
+    train_cached()
