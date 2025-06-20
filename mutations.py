@@ -10,7 +10,7 @@ def mutate_agent(original_agent, mutation_rate, mutation_strength):
     mutated_agent = copy.deepcopy(original_agent)
 
     # --- Structural Mutation: Add Neurons ---
-    ADD_NEURON_CHANCE = 0.05 # 5% chance to add new neurons
+    ADD_NEURON_CHANCE = 0.5 # 5% chance to add new neurons
     MAX_NEURONS_TO_ADD = 2 # Add 1 or 2 new neurons
 
     if random.random() < ADD_NEURON_CHANCE:
@@ -31,9 +31,9 @@ def mutate_agent(original_agent, mutation_rate, mutation_strength):
                     mutated_agent.synapses.append(Synapse(pre, post, weight))
     
     # --- Pruning Logic (Existing) ---
-    PRUNING_CHANCE = 0.1 
+    PRUNING_CHANCE = 0.5 
     PRUNING_NEURON_MAX = 1
-    PRUNING_SYNAPSE_MAX_PERCENT = 0.05
+    PRUNING_SYNAPSE_MAX_PERCENT = 0.01
 
     MIN_NEURONS = 4 
 
@@ -72,7 +72,7 @@ def mutate_agent(original_agent, mutation_rate, mutation_strength):
     for syn in mutated_agent.synapses:
         if random.random() < mutation_rate:
             syn.weight += random.uniform(-mutation_strength, mutation_strength)
-            syn.weight = max(min(syn.weight, 2.0), -2.0)
+            syn.weight = max(min(syn.weight, 1.0), -1.0)
 
     for neuron in mutated_agent.neurons:
         if random.random() < mutation_rate:
